@@ -1,0 +1,50 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: dileepsreg.azurecr.io
+        username: ${{ secrets.acr_dileepsreg_username }}
+        password: ${{ secrets.acr_dileepsreg_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/" -f  "https://github.com/nginxinc/docker-nginx/blob/master/stable/alpine-perl/Dockerfile" -t dileepsreg.azurecr.io/dileepkub1:${{ github.sha }}
+        docker push dileepsreg.azurecr.io/dileepkub1:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_dileepkub1_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep dileepkub181bb | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace dileepkub181bb`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: dileepkub181bb
+        container-registry-url: dileepsreg.azurecr.io
+        container-registry-username: ${{ secrets.acr_dileepsreg_username }}
+        container-registry-password: ${{ secrets.acr_dileepsreg_password }}
+        secret-name: dileepkub1dockerauth
+       
+    - uses: azure/k8s-deploy@v1.2
+      with:
+        namespace: dileepkub181bb
+        manifests: |
+          manifests/deployment.yml
+          manifests/service.yml
+        images: |
+          dileepsreg.azurecr.io/dileepkub1:${{ github.sha }}
+        imagepullsecrets: |
+          dileepkub1dockerauth
