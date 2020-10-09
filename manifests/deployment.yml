@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: "dileepkub1-0f99"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "dileepkub1-0f99"
+  template:
+    metadata:
+      labels:
+        app: "dileepkub1-0f99"
+    spec:
+      containers:
+        - name: "dileepkub1-0f99"
+          image: "dileepsreg.azurecr.io/dileepkub1"
+          ports:
+          - containerPort: 80
